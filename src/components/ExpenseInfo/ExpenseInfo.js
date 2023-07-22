@@ -1,10 +1,35 @@
 import React from "react";
+import {useState,useEffect} from 'react';
 import styles from "./ExpenseInfo.module.css";
+import { collection,getDocs } from "firebase/firestore";
+import { db } from "../../firebaseinit";
 
-const ExpenseInfo = ({ expenses }) => {
+// to fetch data from the database
+const useExpenseData = () => {
+  const [expenseData,setExpenseData] = useState([]);
+
+  useEffect(()=>{
+    const fetchData = async()=> {
+      const docRef = collection(db,'expenseData');
+      const snapShot = await getDocs(docRef);
+      const data = snapShot.docs.map((doc)=>{
+        return {
+          id:doc.id,
+          ...doc.data()
+        }
+      });
+      setExpenseData(data);
+    };
+    fetchData();
+  },[expenseData]);
+  return{expenseData};
+}
+
+const ExpenseInfo = () => {
+  const {expenseData} = useExpenseData();
   let profitAmount = 0;
   let lossAmount = 0;
-  const grandTotal = expenses.reduce((acc, currentExpense) => {
+  const grandTotal = expenseData.reduce((acc, currentExpense) => {
     const currentExpenseAmount = parseInt(currentExpense.amount);
     if (currentExpenseAmount < 0) {
       lossAmount += currentExpenseAmount;
@@ -24,13 +49,13 @@ const ExpenseInfo = ({ expenses }) => {
         <div>
           <h4>Income</h4>
           <p id="money-plus" className={`${styles.money} ${styles.plus}`}>
-            +${profitAmount}
+          +${Math.abs(profitAmount).toFixed(2)}
           </p>
         </div>
         <div>
           <h4>Expense</h4>
           <p id="money-minus" className={`${styles.money} ${styles.minus}`}>
-            -${lossAmount}
+          -${Math.abs(lossAmount).toFixed(2)}
           </p>
         </div>
       </div>

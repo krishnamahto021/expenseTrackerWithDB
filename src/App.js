@@ -1,4 +1,6 @@
-import { useState, useReducer } from "react";
+import { useState, useReducer, useEffect } from "react";
+import { db } from "./firebaseinit";
+import { getDocs,setDoc } from "firebase/firestore";
 import "./App.css";
 
 // components imports
@@ -9,6 +11,7 @@ import ExpenseList from "./components/ExpenseList/ExpenseList";
 // react toasts
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { collection, deleteDoc, doc, getDoc } from "firebase/firestore";
 
 // import firebase methods here
 
@@ -21,12 +24,15 @@ const reducer = (state, action) => {
       };
     }
     case "REMOVE_EXPENSE": {
-      return {
-        expenses: state.expenses.filter((expense) => expense.id !== payload.id)
-      };
+      async function deleteFunction() {
+        const docRef = doc(db, 'expenseData', payload.id);
+        await deleteDoc(docRef);
+      }
+      deleteFunction();
+      return state;
     }
     case "UPDATE_EXPENSE": {
-      const expensesDuplicate = state.expenses;
+      const expensesDuplicate = [...state.expenses];
       expensesDuplicate[payload.expensePos] = payload.expense;
       return {
         expenses: expensesDuplicate
@@ -41,6 +47,27 @@ function App() {
   const [state, dispatch] = useReducer(reducer, { expenses: [] });
   const [expenseToUpdate, setExpenseToUpdate] = useState(null);
 
+  const useExpenseData = () => {
+    const [expenseData, setExpenseData] = useState([]);
+    useEffect(() => {
+      const fetchData = async () => {
+        const docRef = collection(db, 'expenseData');
+        const snapShot = await getDocs(docRef);
+        const data = snapShot.docs.map((doc) => {
+          return {
+            id: doc.id,
+            ...doc.data()
+          };
+        });
+        setExpenseData(data);
+      };
+      fetchData();
+    }, [expenseData]);
+    return expenseData;
+  };
+
+  const expenseData = useExpenseData();
+
   const addExpense = async (expense) => {
     // add expense to firestore here
 
@@ -52,7 +79,9 @@ function App() {
     toast.success("Expense added successfully.");
   };
 
-  const deleteExpense = (id) => {
+  const deleteExpense = async (id) => {
+    // const docRef = doc(db, 'expenseData', id);
+    // await deleteDoc(docRef);
     dispatch({ type: "REMOVE_EXPENSE", payload: { id } });
   };
 
@@ -60,22 +89,37 @@ function App() {
     setExpenseToUpdate(null);
   };
 
-  const updateExpense = async (expense) => {
-    const expensePos = state.expenses
-      .map(function (exp) {
-        return exp.id;
-      })
-      .indexOf(expense.id);
+  // const updateExpense = async (expense) => {
+  //   const expensePos = expenseData.findIndex((exp) => exp.id === expense.id);
 
+  //   if (expensePos === -1) {
+  //     return false;
+  //   }
+
+  //   // update expense in firestore here
+  //   const docRef = doc(db, 'expenseData', expense.id);
+  //   await docRef.update(expense);
+
+  //   dispatch({ type: "UPDATE_EXPENSE", payload: { expensePos, expense } });
+  //   toast.success("Expense updated successfully.");
+  // };
+
+  const updateExpense = async (expense) => {
+    const expensePos = expenseData.findIndex((exp) => exp.id === expense.id);
+  
     if (expensePos === -1) {
       return false;
     }
-
-    // update expense in firestore here
-
+  
+    // Update the expense in firestore here
+    const docRef = doc(db, 'expenseData', expense.id);
+    await setDoc(docRef, expense); // Use setDoc instead of update
+  
     dispatch({ type: "UPDATE_EXPENSE", payload: { expensePos, expense } });
     toast.success("Expense updated successfully.");
   };
+
+
 
   return (
     <>

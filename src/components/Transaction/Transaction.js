@@ -46,8 +46,8 @@ const Transaction = ({
             <img src={EditImage} height="100%" alt="Edit" />
           </div>
           <div
-            className={styles.delete}
-            onClick={() => deleteExpense(expense.id)}
+            className={styles.delete} 
+            onClick={()=>deleteExpense(expense.id)}
           >
             <img src={DeleteImage} height="100%" alt="Delete" />
           </div>
